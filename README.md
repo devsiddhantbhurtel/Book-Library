@@ -1,4 +1,4 @@
-# 📚 Book Library Management System
+# 📚 Book Library System
 
 A full-featured **Book Library System** built with ASP.NET Core and Razor Pages. It supports user accounts, book management, borrowing, cart and order functionalities, and staff/admin tools — all in one platform.
 
