@@ -1,0 +1,60 @@
+@{
+    ViewData["Title"] = "Admin Dashboard";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" />
+
+<style>
+    .admin-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .admin-card:hover {
+        transform: translateY(-5px) scale(1.03);
+        box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.15);
+        cursor: pointer;
+    }
+</style>
+
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold">📘 Admin Dashboard</h1>
+        <p class="text-muted fs-5">Manage all administrative features in one place</p>
+    </div>
+
+    <div class="row g-4 justify-content-center">
+        <div class="col-md-4 col-lg-3">
+            <div class="card text-center shadow-sm border-0 h-100 admin-card">
+                <div class="card-body">
+                    <i class="bi bi-journal-bookmark display-4 text-primary mb-3"></i>
+                    <h5 class="card-title">Manage Books</h5>
+                    <a href="/ManageBooks" class="btn btn-primary w-100 mt-3">Open</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 col-lg-3">
+            <div class="card text-center shadow-sm border-0 h-100 admin-card">
+                <div class="card-body">
+                    <i class="bi bi-tag display-4 text-warning mb-3"></i>
+                    <h5 class="card-title">Manage Discounts</h5>
+                    <a href="/Admin/ManageDiscounts" class="btn btn-warning w-100 text-white mt-3">Open</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 col-lg-3">
+            <div class="card text-center shadow-sm border-0 h-100 admin-card">
+                <div class="card-body">
+                    <i class="bi bi-megaphone display-4 text-info mb-3"></i>
+                    <h5 class="card-title">Manage Announcements</h5>
+                    <a href="/ManageAnnouncements" class="btn btn-info w-100 text-white mt-3">Open</a>
+                </div>
+            </div>
+        </div>
+        
+    
+    </div>
+
+</div>

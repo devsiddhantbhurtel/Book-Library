@@ -1,0 +1,273 @@
+@model BookLibrarySystem.Models.User
+
+@{
+    ViewData["Title"] = "Staff Portal";
+    Layout = "_Layout";
+}
+
+<div class="container py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="bi bi-speedometer2 me-2"></i>Staff Portal
+            </h2>
+            <p class="text-muted mb-0">Welcome back, @Model.FullName!</p>
+        </div>
+        <span class="badge bg-primary px-3 py-2">
+            <i class="bi bi-person-badge me-2"></i>Staff Member
+        </span>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 rounded-3 mb-4">
+                <div class="card-body p-4">
+                    <h5 class="card-title d-flex align-items-center mb-4">
+                        <i class="bi bi-check-circle-fill me-2 text-primary"></i>
+                        Verify Order Claim
+                    </h5>
+                    <form id="verifyClaimForm">
+                        <div class="mb-3">
+                            <label for="claimCode" class="form-label">Claim Code</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">
+                                    <i class="bi bi-upc-scan"></i>
+                                </span>
+                                <input type="text" class="form-control form-control-lg" id="claimCode" name="claimCode" 
+                                       placeholder="Enter claim code" required>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label for="membershipId" class="form-label">Membership ID</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">
+                                    <i class="bi bi-person-vcard"></i>
+                                </span>
+                                <input type="text" class="form-control form-control-lg" id="membershipId" name="membershipId" 
+                                       placeholder="Enter membership ID" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <i class="bi bi-shield-check me-2"></i>Verify Claim
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-body p-4">
+                    <h5 class="card-title d-flex align-items-center mb-4">
+                        <i class="bi bi-bell-fill me-2 text-primary"></i>
+                        Live Notifications
+                    </h5>
+                    <div id="notificationsList" class="notification-list">
+                        @foreach (dynamic notification in ViewBag.RecentNotifications ?? new List<object>())
+                        {
+                            <div class="notification-item fade-in">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle me-1"></i>Order Fulfilled
+                                    </span>
+                                    <small class="notification-time">@notification.fulfillmentTime</small>
+                                </div>
+                                <div class="mt-2">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <i class="bi bi-receipt me-2 text-muted"></i>
+                                        <span>Order ID: @notification.orderId</span>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-upc me-2 text-muted"></i>
+                                        <span>Claim Code: @notification.claimCode</span>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .notification-list {
+        max-height: 600px;
+        overflow-y: auto;
+        padding: 0.5rem;
+    }
+
+    .notification-item {
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 0.75rem;
+        background-color: #f8f9fa;
+        border-left: 4px solid var(--primary-color);
+        transition: all 0.3s ease;
+    }
+
+    .notification-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    .notification-time {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+
+    .form-control {
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(99, 102, 241, 0.1);
+    }
+
+    .input-group-text {
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e2e8f0;
+    }
+
+    .fade-in {
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .notification-list::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .notification-list::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+    }
+
+    .notification-list::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+</style>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
+    <script>
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/staffNotificationHub")
+            .withAutomaticReconnect()
+            .build();
+
+        connection.on("ReceiveNotification", (notification) => {
+            console.log("Received notification:", notification);
+            if (notification.type === "OrderFulfilled") {
+                const html = `
+                    <div class="notification-item fade-in">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle me-1"></i>Order Fulfilled
+                            </span>
+                            <small class="notification-time">${notification.fulfillmentTime}</small>
+                        </div>
+                        <div class="mt-2">
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="bi bi-receipt me-2 text-muted"></i>
+                                <span>Order ID: ${notification.orderId}</span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-upc me-2 text-muted"></i>
+                                <span>Claim Code: ${notification.claimCode}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                const list = document.getElementById("notificationsList");
+                list.insertAdjacentHTML('afterbegin', html);
+
+                const items = list.getElementsByClassName("notification-item");
+                if (items.length > 50) items[items.length - 1].remove();
+            }
+        });
+
+        async function startConnection() {
+            try {
+                await connection.start();
+                console.log("SignalR Connected");
+            } catch (err) {
+                console.error("SignalR Error:", err);
+                setTimeout(startConnection, 5000);
+            }
+        }
+
+        startConnection();
+
+        document.getElementById("verifyClaimForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Verifying...';
+            btn.disabled = true;
+
+            const formData = {
+                claimCode: document.getElementById("claimCode").value,
+                membershipId: document.getElementById("membershipId").value
+            };
+
+            try {
+                const response = await fetch('/api/staff/verify-claim', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                const toast = document.createElement('div');
+                toast.className = 'position-fixed bottom-0 end-0 p-3';
+                toast.style.zIndex = '5';
+
+                if (result.success) {
+                    toast.innerHTML = `
+                        <div class="toast show" role="alert">
+                            <div class="toast-header bg-success text-white">
+                                <i class="bi bi-check-circle me-2"></i>
+                                <strong class="me-auto">Success</strong>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                            </div>
+                            <div class="toast-body">${result.message}</div>
+                        </div>
+                    `;
+                    document.getElementById("verifyClaimForm").reset();
+                } else {
+                    toast.innerHTML = `
+                        <div class="toast show" role="alert">
+                            <div class="toast-header bg-danger text-white">
+                                <i class="bi bi-x-circle me-2"></i>
+                                <strong class="me-auto">Error</strong>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                            </div>
+                            <div class="toast-body">${result.message}</div>
+                        </div>
+                    `;
+                }
+
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3500);
+            } catch (error) {
+                alert("Something went wrong. Please try again.");
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+    </script>
+}

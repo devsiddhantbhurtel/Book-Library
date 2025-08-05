@@ -1,0 +1,74 @@
+@page "/admin/books"
+@inject IJSRuntime JS
+
+@using Microsoft.JSInterop
+
+<h3>Manage Books</h3>
+<button class="btn btn-primary mb-2" @onclick="AddBook">Add Book</button>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Author</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var book in books)
+        {
+            <tr>
+                <td>@book.Title</td>
+                <td>@book.Author</td>
+                <td>
+                    <button class="btn btn-warning btn-sm" @onclick="() => EditBook(book)">Edit</button>
+                    <button class="btn btn-danger btn-sm" @onclick="() => DeleteBook(book)">Delete</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Book> books = new List<Book>
+    {
+        new Book { Title = "The Great Gatsby", Author = "F. Scott Fitzgerald" },
+        new Book { Title = "To Kill a Mockingbird", Author = "Harper Lee" }
+        // Replace with actual data fetching logic
+    };
+
+    private async Task AddBook()
+    {
+        // Simulate backend call and error handling
+        try
+        {
+            // TODO: Replace with actual API call
+            bool isDuplicateIsbn = true; // Simulate duplicate ISBN error for demo
+            if (isDuplicateIsbn)
+            {
+                await JS.InvokeVoidAsync("alert", "A book with this ISBN already exists. Please use a unique ISBN.");
+                return;
+            }
+            // If success, continue logic here
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Error: {ex.Message}");
+        }
+    }
+
+    private void EditBook(Book book)
+    {
+        // Logic to edit the selected book
+    }
+
+    private void DeleteBook(Book book)
+    {
+        // Logic to delete the selected book
+    }
+
+    public class Book
+    {
+        public string Title { get; set; }
+        public string Author { get; set; }
+    }
+}

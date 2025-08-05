@@ -1,0 +1,368 @@
+@{
+    ViewData["Title"] = "Bookmarks";
+}
+@if (User.Identity?.IsAuthenticated == true)
+{
+    <script>
+        window.currentUserId = "@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value";
+        window.currentUserName = "@User.Identity.Name";
+    </script>
+}
+else
+{
+    <script>
+        window.currentUserId = null;
+        window.currentUserName = null;
+    </script>
+}
+
+<div class="container py-5">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="bi bi-bookmark-heart-fill me-2"></i>My Bookmarks
+            </h2>
+            <p class="text-muted mb-0">Keep track of books you're interested in</p>
+        </div>
+        <a href="/" class="btn btn-primary">
+            <i class="bi bi-book me-2"></i>Browse Books
+        </a>
+    </div>
+
+    <div id="bookmarksContainer" class="fade-in">
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted mt-2">Loading your bookmarks...</p>
+        </div>
+    </div>
+
+    <div id="emptyMsg" class="text-center py-5 d-none fade-in">
+        <i class="bi bi-bookmark-x display-1 text-muted mb-4"></i>
+        <h3 class="mb-3">No Bookmarks Yet</h3>
+        <p class="text-muted mb-4">Start adding books to your bookmarks to keep track of them!</p>
+        <a href="/" class="btn btn-primary btn-lg">
+            <i class="bi bi-book-half me-2"></i>Browse Books
+        </a>
+    </div>
+
+    <div id="bookmarksSummary" class="mt-4"></div>
+</div>
+
+<style>
+    .fade-in {
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .bookmark-item {
+        background: #fff;
+        border-radius: 1rem;
+        padding: 1.25rem !important;
+        transition: all 0.3s ease;
+        border: 1px solid rgba(0,0,0,0.1) !important;
+    }
+
+    .bookmark-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.08) !important;
+    }
+
+    .bookmark-book-img {
+        width: 100px !important;
+        height: 140px !important;
+        object-fit: cover;
+        border-radius: 0.5rem !important;
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.1);
+        transition: transform 0.3s ease;
+    }
+
+    .bookmark-item:hover .bookmark-book-img {
+        transform: scale(1.05);
+    }
+
+    .remove-bookmark-btn {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        background: transparent;
+        border: 2px solid var(--bs-danger);
+        color: var(--bs-danger);
+    }
+
+    .remove-bookmark-btn:hover {
+        background: var(--bs-danger);
+        color: white;
+    }
+
+    .bookmark-summary {
+        background: white;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.05);
+    }
+
+    @@keyframes fadeOut {
+        from { opacity: 1; transform: translateX(0); }
+        to { opacity: 0; transform: translateX(-20px); }
+    }
+</style>
+
+<script>
+function getGuestBookmarks() {
+    try {
+        return JSON.parse(localStorage.getItem('guestBookmarks') || '[]');
+    } catch { return []; }
+}
+
+function setGuestBookmarks(arr) {
+    localStorage.setItem('guestBookmarks', JSON.stringify(arr));
+}
+
+async function loadBookmarks() {
+    const container = document.getElementById('bookmarksContainer');
+    container.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted mt-2">Loading your bookmarks...</p>
+        </div>
+    `;
+
+    let books = [];
+    try {
+        if (window.currentUserId) {
+            // Get user's bookmarks
+            const bookmarkRes = await fetch('/api/bookmark', {
+                credentials: 'same-origin',
+                headers: {
+                    'Authorization': `Bearer ${window.currentUserId}`
+                }
+            });
+            if (!bookmarkRes.ok) throw new Error('Failed to load bookmarks');
+            const bookmarks = await bookmarkRes.json();
+            const bookmarkData = bookmarks.$values || bookmarks;
+            
+            if (bookmarkData && bookmarkData.length > 0) {
+                books = bookmarkData;
+            }
+        } else {
+            const ids = getGuestBookmarks();
+            if (ids.length) {
+                const res = await fetch('/api/book?ids=' + ids.join(','));
+                if (!res.ok) throw new Error('Failed to load bookmarks');
+                const booksData = await res.json();
+                books = booksData.$values || booksData;
+            }
+        }
+
+        if (!books || books.length === 0) {
+            document.getElementById('emptyMsg').classList.remove('d-none');
+            container.innerHTML = '';
+            document.getElementById('bookmarksSummary').innerHTML = '';
+            return;
+        }
+
+        document.getElementById('emptyMsg').classList.add('d-none');
+        let html = '<div class="bookmark-list d-flex flex-column gap-4">';
+        
+        for (const book of books) {
+            const id = book.bookID || book.BookID;
+            const title = book.title || book.Title;
+            const imageUrl = book.imageUrl || book.ImageUrl;
+            const authorNames = book.authorNames || book.AuthorNames || '';
+            const stockQuantity = book.stockQuantity || book.StockQuantity || 0;
+            const price = book.price || book.Price || 0;
+            
+            const img = imageUrl ? 
+                `<img src="${imageUrl}" alt="${title}" class="bookmark-book-img">` : 
+                `<div class="bookmark-book-img d-flex align-items-center justify-content-center bg-light">
+                    <i class="bi bi-book text-muted" style="font-size: 2rem;"></i>
+                </div>`;
+
+            html += `
+                <div class="bookmark-item d-flex align-items-center gap-4" data-bookid="${id}">
+                    ${img}
+                    <div class="flex-grow-1">
+                        <h5 class="mb-2">${title}</h5>
+                        <div class="text-muted mb-2">
+                            <i class="bi bi-person-circle me-2"></i>${authorNames}
+                        </div>
+                        <div class="d-flex gap-2 align-items-center">
+                            <button class="btn btn-primary btn-sm add-cart-btn" 
+                                    onclick="addToCart(${id})"
+                                    ${stockQuantity <= 0 ? 'disabled' : ''}>
+                                <i class="bi bi-cart-plus me-1"></i>Add to Cart
+                            </button>
+                            ${stockQuantity > 0 ? 
+                                `<span class="badge bg-success">
+                                    <i class="bi bi-check-circle me-1"></i>In Stock (${stockQuantity})
+                                </span>` : 
+                                '<span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Out of Stock</span>'}
+                            <span class="ms-auto text-primary fw-bold">₹${price}</span>
+                        </div>
+                    </div>
+                    <button class="remove-bookmark-btn" 
+                            onclick="removeBookmark(${id})" 
+                            title="Remove Bookmark">
+                        <i class="bi bi-bookmark-x fs-5"></i>
+                    </button>
+                </div>`;
+        }
+        
+        html += '</div>';
+        container.innerHTML = html;
+
+        // Summary
+        document.getElementById('bookmarksSummary').innerHTML = `
+            <div class="bookmark-summary mt-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-bookmark-check me-2"></i>
+                        <span class="fw-bold">Total Bookmarks</span>
+                    </div>
+                    <span class="h4 mb-0 text-primary">${books.length}</span>
+                </div>
+            </div>`;
+
+    } catch (error) {
+        container.innerHTML = `
+            <div class="alert alert-danger d-flex align-items-center" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <div>Failed to load bookmarks: ${error.message}</div>
+            </div>`;
+    }
+}
+
+async function removeBookmark(bookId) {
+    if (!confirm('Are you sure you want to remove this bookmark?')) return;
+    
+    try {
+        if (window.currentUserId) {
+            const res = await fetch(`/api/bookmark/remove/${bookId}`, {
+                method: 'DELETE',
+                credentials: 'same-origin',
+                headers: {
+                    'Authorization': `Bearer ${window.currentUserId}`
+                }
+            });
+            
+            if (!res.ok) throw new Error('Failed to remove bookmark');
+            
+            // Remove the item from the UI
+            const item = document.querySelector(`.bookmark-item[data-bookid="${bookId}"]`);
+            if (item) {
+                item.style.animation = 'fadeOut 0.3s ease forwards';
+                setTimeout(() => {
+                    item.remove();
+                    // Check if there are any bookmarks left
+                    const remainingItems = document.querySelectorAll('.bookmark-item');
+                    if (remainingItems.length === 0) {
+                        document.getElementById('emptyMsg').classList.remove('d-none');
+                        document.getElementById('bookmarksSummary').innerHTML = '';
+                    } else {
+                        // Update the counter
+                        const counter = document.querySelector('#bookmarksSummary .h4');
+                        if (counter) counter.textContent = remainingItems.length;
+                    }
+                }, 300);
+            }
+
+            // Show success toast
+            const toast = document.createElement('div');
+            toast.className = 'position-fixed bottom-0 end-0 p-3';
+            toast.style.zIndex = '5';
+            toast.innerHTML = `
+                <div class="toast show" role="alert">
+                    <div class="toast-header bg-success text-white">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <strong class="me-auto">Success</strong>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                    </div>
+                    <div class="toast-body">
+                        Bookmark removed successfully.
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        } else {
+            let bookmarks = getGuestBookmarks();
+            bookmarks = bookmarks.filter(id => id !== bookId);
+            setGuestBookmarks(bookmarks);
+            await loadBookmarks(); // Reload the list for guest users
+        }
+    } catch (error) {
+        alert('Failed to remove bookmark: ' + error.message);
+    }
+}
+
+async function addToCart(bookId) {
+    if (!window.currentUserId) {
+        alert('Please log in to add items to cart');
+        return;
+    }
+
+    const btn = event.target.closest('.add-cart-btn');
+    if (!btn) return;
+
+    btn.disabled = true;
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Adding...';
+
+    try {
+        const res = await fetch('/api/cart', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'same-origin',
+            body: JSON.stringify({ BookID: bookId, Quantity: 1 })
+        });
+
+        if (res.ok) {
+            btn.innerHTML = '<i class="bi bi-cart-check"></i> Added!';
+            // Show success toast
+            const toast = document.createElement('div');
+            toast.className = 'position-fixed bottom-0 end-0 p-3';
+            toast.style.zIndex = '5';
+            toast.innerHTML = `
+                <div class="toast show" role="alert">
+                    <div class="toast-header bg-success text-white">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <strong class="me-auto">Success</strong>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                    </div>
+                    <div class="toast-body">
+                        Book added to cart successfully.
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+
+            // Reset button after delay
+            setTimeout(() => {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }, 1200);
+        } else {
+            throw new Error('Failed to add to cart');
+        }
+    } catch (error) {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+        alert('Failed to add to cart: ' + error.message);
+    }
+}
+
+window.onload = loadBookmarks;
+</script> 

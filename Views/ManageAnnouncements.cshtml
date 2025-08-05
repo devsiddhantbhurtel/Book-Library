@@ -1,0 +1,153 @@
+@{
+    ViewData["Title"] = "Manage Announcements";
+}
+<div class="container mt-4">
+    <h2 class="mb-4">Manage Announcements</h2>
+    <div id="announcementsTableWrap">
+        <table class="table table-striped" id="announcementsTable">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Message</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Display Location</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="announcementsBody">
+                <!-- Announcements will be loaded here -->
+            </tbody>
+        </table>
+    </div>
+    <!-- Add/Edit Announcement Modal -->
+    <div class="modal fade" id="announcementModal" tabindex="-1" aria-labelledby="announcementModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="announcementModalLabel">Add/Edit Announcement</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="announcementForm">
+                        <input type="hidden" id="announcementId" />
+                        <div class="mb-2">
+                            <label>Title</label>
+                            <input type="text" class="form-control" id="announcementTitle" required />
+                        </div>
+                        <div class="mb-2">
+                            <label>Message</label>
+                            <textarea class="form-control" id="announcementMessage" required></textarea>
+                        </div>
+                        <div class="mb-2">
+                            <label>Start Date</label>
+                            <input type="datetime-local" class="form-control" id="announcementStartDate" required />
+                        </div>
+                        <div class="mb-2">
+                            <label>End Date</label>
+                            <input type="datetime-local" class="form-control" id="announcementEndDate" required />
+                        </div>
+                        <div class="mb-2">
+                            <label>Display Location</label>
+                            <select class="form-control" id="announcementDisplayLocation" required>
+                                <option value="Homepage">Homepage</option>
+                                <option value="Catalog">Catalog</option>
+                                <option value="Banner">Banner</option>
+                            </select>
+                        </div>
+                        <div id="announcementMsg" class="mt-2"></div>
+                        <button type="submit" class="btn btn-primary">Save Announcement</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <button class="btn btn-success mt-3" onclick="showAnnouncementModal()">Add Announcement</button>
+</div>
+@section Scripts {
+<script>
+async function loadAnnouncements() {
+    const res = await fetch('/api/announcement');
+    const anns = await res.json();
+    const tbody = document.getElementById('announcementsBody');
+    tbody.innerHTML = '';
+    (Array.isArray(anns) ? anns : (anns.$values || [])).forEach(ann => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${ann.Title}</td>
+            <td>${ann.Message}</td>
+            <td>${ann.StartDate ? ann.StartDate.replace('T',' ').substring(0,16) : ''}</td>
+            <td>${ann.EndDate ? ann.EndDate.replace('T',' ').substring(0,16) : ''}</td>
+            <td>${ann.DisplayLocation}</td>
+            <td>
+                <button class="btn btn-sm btn-warning" onclick="editAnnouncement(${ann.AnnouncementID})">Edit</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteAnnouncement(${ann.AnnouncementID})">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+async function showAnnouncementModal(id) {
+    if (id) {
+        const res = await fetch('/api/announcement');
+        const anns = await res.json();
+        const ann = (Array.isArray(anns) ? anns : (anns.$values || [])).find(a => a.AnnouncementID === id);
+        document.getElementById('announcementId').value = ann.AnnouncementID;
+        document.getElementById('announcementTitle').value = ann.Title;
+        document.getElementById('announcementMessage').value = ann.Message;
+        document.getElementById('announcementStartDate').value = ann.StartDate ? ann.StartDate.substring(0,16) : '';
+        document.getElementById('announcementEndDate').value = ann.EndDate ? ann.EndDate.substring(0,16) : '';
+        document.getElementById('announcementDisplayLocation').value = ann.DisplayLocation;
+        document.getElementById('announcementMsg').innerText = '';
+    } else {
+        document.getElementById('announcementId').value = '';
+        document.getElementById('announcementTitle').value = '';
+        document.getElementById('announcementMessage').value = '';
+        document.getElementById('announcementStartDate').value = '';
+        document.getElementById('announcementEndDate').value = '';
+        document.getElementById('announcementDisplayLocation').value = 'Homepage';
+        document.getElementById('announcementMsg').innerText = '';
+    }
+    var modal = new bootstrap.Modal(document.getElementById('announcementModal'));
+    modal.show();
+}
+document.getElementById('announcementForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const id = document.getElementById('announcementId').value;
+    const ann = {
+        AnnouncementID: id ? parseInt(id) : 0,
+        Title: document.getElementById('announcementTitle').value,
+        Message: document.getElementById('announcementMessage').value,
+        StartDate: document.getElementById('announcementStartDate').value,
+        EndDate: document.getElementById('announcementEndDate').value,
+        DisplayLocation: document.getElementById('announcementDisplayLocation').value
+    };
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `/api/announcement/${id}` : '/api/announcement';
+    const res = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ann)
+    });
+    if (res.ok) {
+        document.getElementById('announcementMsg').innerText = 'Saved!';
+        setTimeout(() => {
+            bootstrap.Modal.getInstance(document.getElementById('announcementModal')).hide();
+            loadAnnouncements();
+        }, 800);
+    } else {
+        document.getElementById('announcementMsg').innerText = 'Save failed.';
+    }
+});
+async function editAnnouncement(id) {
+    await showAnnouncementModal(id);
+}
+async function deleteAnnouncement(id) {
+    if (!confirm('Are you sure you want to delete this announcement?')) return;
+    const res = await fetch(`/api/announcement/${id}`, { method: 'DELETE' });
+    if (res.ok) loadAnnouncements();
+    else alert('Failed to delete announcement');
+}
+window.onload = loadAnnouncements;
+</script>
+}

@@ -1,0 +1,182 @@
+@model BookLibrarySystem.Models.ViewModels.ClaimRecordsSearchModel
+@{
+    ViewData["Title"] = "Claim Records";
+}
+
+<div class="container py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="bi bi-journal-check me-2"></i>Claim Records
+            </h2>
+            <p class="text-muted mb-0">Track and manage order claims</p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-3 mb-4">
+        <div class="card-body p-4">
+            <h5 class="card-title d-flex align-items-center mb-4">
+                <i class="bi bi-search me-2 text-primary"></i>
+                Search Claims
+            </h5>
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    <label for="searchTerm" class="form-label">Search Term</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" class="form-control form-control-lg" id="searchTerm" 
+                               name="searchTerm" value="@Model.SearchTerm" 
+                               placeholder="Enter search term">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label for="searchType" class="form-label">Search By</label>
+                    <select class="form-select form-select-lg" id="searchType" name="searchType">
+                        <option value="OrderID" selected="@(Model.SearchType == "OrderID")">Order ID</option>
+                        <option value="StaffName" selected="@(Model.SearchType == "StaffName")">Staff Name</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-search me-2"></i>Search
+                        </button>
+                        <a href="@Url.Action("ClaimRecords")" class="btn btn-outline-secondary btn-lg">
+                            <i class="bi bi-x-circle me-2"></i>Clear
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-body p-4">
+            <h5 class="card-title d-flex align-items-center mb-4">
+                <i class="bi bi-list-check me-2 text-primary"></i>
+                Results
+            </h5>
+            
+            @if (!Model.Claims.Any())
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox text-muted display-1 mb-4"></i>
+                    <h4>No Records Found</h4>
+                    <p class="text-muted">Try adjusting your search criteria</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col">Claim ID</th>
+                                <th scope="col">Staff Name</th>
+                                <th scope="col">Order ID</th>
+                                <th scope="col">Claim Date</th>
+                                <th scope="col">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var claim in Model.Claims)
+                            {
+                                <tr class="claim-row">
+                                    <td>
+                                        <span class="badge bg-primary">
+                                            <i class="bi bi-hash me-1"></i>@claim.ClaimID
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-person-circle text-muted me-2"></i>
+                                            @claim.StaffName
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-receipt text-muted me-2"></i>
+                                            @claim.OrderID
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-calendar-event text-muted me-2"></i>
+                                            @claim.ClaimDate.ToString("yyyy-MM-dd HH:mm:ss")
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle me-1"></i>Verified
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control, .form-select {
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(99, 102, 241, 0.1);
+    }
+
+    .input-group-text {
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e2e8f0;
+    }
+
+    .table {
+        margin-bottom: 0;
+    }
+
+    .table th {
+        font-weight: 600;
+        color: #4b5563;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+    }
+
+    .claim-row {
+        transition: all 0.3s ease;
+    }
+
+    .claim-row:hover {
+        background-color: #f8f9fa;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    .badge {
+        padding: 0.5rem 0.75rem;
+        font-weight: 500;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        // Preserve the selected search type when form is submitted
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchType = '@Model.SearchType';
+            if (searchType) {
+                document.getElementById('searchType').value = searchType;
+            }
+        });
+    </script>
+} 

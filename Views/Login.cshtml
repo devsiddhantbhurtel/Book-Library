@@ -1,0 +1,128 @@
+@{
+    ViewData["Title"] = "Login";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-body p-4">
+                    <h2 class="text-center mb-4">Welcome Back</h2>
+                    
+                    <form id="loginForm" class="needs-validation" novalidate>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control form-control-lg" id="email" name="email" 
+                                   placeholder="Enter your email" required>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control form-control-lg" id="password" name="password" 
+                                   placeholder="Enter your password" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>Login
+                        </button>
+
+                        <div id="loginMessage" class="alert alert-danger mt-3" style="display: none;"></div>
+                    </form>
+
+                    <div class="text-center mt-4">
+                        <p class="mb-0">Don't have an account? <a asp-controller="Home" asp-action="Register" class="text-primary text-decoration-none">Register here</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control {
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(99, 102, 241, 0.1);
+    }
+
+    .btn-primary {
+        background: var(--primary-color);
+        border: none;
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        background: var(--primary-dark);
+        transform: translateY(-2px);
+    }
+
+    .card {
+        background: white;
+    }
+
+    .form-label {
+        font-weight: 500;
+        color: #4b5563;
+        margin-bottom: 0.5rem;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const form = e.target;
+            const data = {
+                email: form.email.value,
+                password: form.password.value
+            };
+
+            try {
+                const res = await fetch('/api/user/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const msgElem = document.getElementById('loginMessage');
+                
+                if (res.ok) {
+                    const user = await res.json();
+                    if (user.role) {
+                        const role = user.role.toLowerCase();
+                        switch (role) {
+                            case 'admin':
+                                window.location.href = '/AdminDashboard';
+                                break;
+                            case 'staff':
+                                window.location.href = '/Home/StaffPortal';
+                                break;
+                            default:
+                                window.location.href = '/';
+                                break;
+                        }
+                    } else {
+                        window.location.href = '/';
+                    }
+                } else {
+                    const text = await res.text();
+                    msgElem.textContent = 'Invalid email or password';
+                    msgElem.style.display = 'block';
+                }
+            } catch (error) {
+                const msgElem = document.getElementById('loginMessage');
+                msgElem.textContent = 'An error occurred. Please try again.';
+                msgElem.style.display = 'block';
+            }
+        });
+    </script>
+}

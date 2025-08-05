@@ -1,0 +1,871 @@
+@* Book Details Page *@
+<!-- TODO: Implement book details page markup and logic here. -->
+
+@model Book
+
+@{
+    ViewData["Title"] = Model.Title;
+
+    // Helper methods
+    string GetAuthorNames()
+    {
+        return Model.BookAuthors?.Select(ba => ba.Author.Name).Any() == true
+            ? string.Join(", ", Model.BookAuthors.Select(ba => ba.Author.Name))
+            : "Unknown Author";
+    }
+
+    string GetGenreNames()
+    {
+        return Model.BookGenres?.Select(bg => bg.Genre.Name).Any() == true
+            ? string.Join(", ", Model.BookGenres.Select(bg => bg.Genre.Name))
+            : "";
+    }
+
+    string GetPublisherName()
+    {
+        return Model.BookPublishers?.FirstOrDefault()?.Publisher.Name ?? "";
+    }
+
+    decimal? GetDiscountedPrice()
+    {
+        var activeDiscount = Model.Discounts?.FirstOrDefault(d => d.IsActive == true);
+        if (activeDiscount == null) return null;
+        
+        return activeDiscount.DiscountType == 0 
+            ? Model.Price - (Model.Price * activeDiscount.DiscountValue / 100) 
+            : Model.Price - activeDiscount.DiscountValue;
+    }
+}
+
+<div class="book-details-wrapper py-5">
+    <div class="container">
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="/" class="text-decoration-none">
+                        <i class="bi bi-house-door"></i> Home
+                    </a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">@Model.Title</li>
+            </ol>
+        </nav>
+
+        <div class="row g-4">
+            <!-- Book Image Column -->
+            <div class="col-md-5">
+                <div class="book-image-container">
+                    <div class="book-image-wrapper rounded-4 overflow-hidden shadow-lg position-relative">
+                        @{
+                            var discountedPrice = GetDiscountedPrice();
+                        }
+                        @if (discountedPrice.HasValue && discountedPrice.Value < Model.Price)
+                        {
+                            <div class="sale-badge">
+                                <div class="badge bg-danger p-2">
+                                    @(((Model.Price - discountedPrice.Value) / Model.Price * 100).ToString("0"))% OFF
+                                </div>
+                            </div>
+                        }
+                        <img src="@(Model.ImageUrl ?? "/images/book-placeholder.png")" 
+                             class="img-fluid rounded-4 book-cover-image" 
+                             alt="@Model.Title">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Book Details Column -->
+            <div class="col-md-7">
+                <div class="book-details-content">
+                    <!-- Title and Author Section -->
+                    <div class="mb-4">
+                        <h1 class="display-5 fw-bold mb-2 book-title">@Model.Title</h1>
+                        <div class="text-muted fs-5">
+                            <i class="bi bi-person-circle me-2"></i>By @GetAuthorNames()
+                        </div>
+                        <div class="mt-2">
+                            @foreach (var genre in (GetGenreNames().Split(',').Select(g => g.Trim())))
+                            {
+                                if (!string.IsNullOrEmpty(genre))
+                                {
+                                    <span class="badge bg-light text-dark me-2 mb-2">
+                                        <i class="bi bi-tag me-1"></i>@genre
+                                    </span>
+                                }
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Price Section -->
+                    <div class="price-section card border-0 bg-light p-4 rounded-4 mb-4">
+                        @if (discountedPrice.HasValue && discountedPrice.Value < Model.Price)
+                        {
+                            <div class="d-flex align-items-center gap-3">
+                                <h2 class="text-danger mb-0 display-6">₹@discountedPrice.Value.ToString("0.00")</h2>
+                                <div>
+                                    <span class="text-decoration-line-through fs-5 text-muted">₹@Model.Price.ToString("0.00")</span>
+                                    <span class="badge bg-success ms-2 p-2">
+                                        <i class="bi bi-tag-fill me-1"></i>
+                                        @(((Model.Price - discountedPrice.Value) / Model.Price * 100).ToString("0"))% OFF
+                                    </span>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <h2 class="mb-0 display-6">₹@Model.Price.ToString("0.00")</h2>
+                        }
+                    </div>
+
+                    <!-- Availability Section -->
+                    <div class="availability-section mb-4">
+                        <div class="d-flex gap-3 flex-wrap">
+                            @if (Model.StockQuantity > 0)
+                            {
+                                <div class="status-badge bg-success-subtle text-success px-3 py-2 rounded-pill">
+                                    <i class="bi bi-check-circle-fill me-2"></i>In Stock
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="status-badge bg-danger-subtle text-danger px-3 py-2 rounded-pill">
+                                    <i class="bi bi-x-circle-fill me-2"></i>Out of Stock
+                                </div>
+                            }
+                            @if (Model.InLibraryAccess == true)
+                            {
+                                <div class="status-badge bg-info-subtle text-info px-3 py-2 rounded-pill">
+                                    <i class="bi bi-book-fill me-2"></i>Library Access
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="action-buttons mb-4">
+                        <div class="d-flex gap-3">
+                            <button type="button" 
+                                    class="btn btn-primary btn-lg flex-grow-1 add-cart-btn d-flex align-items-center justify-content-center gap-2" 
+                                    data-bookid="@Model.BookID"
+                                    @(Model.StockQuantity <= 0 ? "disabled" : "")>
+                                <i class="bi bi-cart-plus fs-5"></i>
+                                <span>Add to Cart</span>
+                            </button>
+                            <button type="button" 
+                                    class="btn btn-outline-primary btn-lg bookmark-btn d-flex align-items-center justify-content-center" 
+                                    data-bookid="@Model.BookID"
+                                    title="@(ViewBag.IsBookmarked ? "Remove from Bookmarks" : "Add to Bookmarks")">
+                                <i class="bi @(ViewBag.IsBookmarked ? "bi-bookmark-heart-fill" : "bi-bookmark-heart") fs-5"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Book Details Card -->
+                    <div class="book-details-card card border-0 shadow-sm rounded-4 mb-4">
+                        <div class="card-body p-4">
+                            <h5 class="card-title mb-4">
+                                <i class="bi bi-info-circle me-2"></i>Book Details
+                            </h5>
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <div class="detail-item mb-3">
+                                        <div class="text-muted small mb-1">ISBN</div>
+                                        <div class="fw-medium">@Model.ISBN</div>
+                                    </div>
+                                    <div class="detail-item mb-3">
+                                        <div class="text-muted small mb-1">Language</div>
+                                        <div class="fw-medium">@(Model.Language ?? "Not specified")</div>
+                                    </div>
+                                    <div class="detail-item">
+                                        <div class="text-muted small mb-1">Format</div>
+                                        <div class="fw-medium">@(Model.Format ?? "Not specified")</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="detail-item mb-3">
+                                        <div class="text-muted small mb-1">Publisher</div>
+                                        <div class="fw-medium">@GetPublisherName()</div>
+                                    </div>
+                                    <div class="detail-item mb-3">
+                                        <div class="text-muted small mb-1">Publication Date</div>
+                                        <div class="fw-medium">@(Model.PublicationDate?.ToString("MMMM d, yyyy") ?? "Not specified")</div>
+                                    </div>
+                                    <div class="detail-item">
+                                        <div class="text-muted small mb-1">Genre</div>
+                                        <div class="fw-medium">@GetGenreNames()</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Description Section -->
+                    <div class="description-section card border-0 shadow-sm rounded-4">
+                        <div class="card-body p-4">
+                            <h5 class="card-title mb-3">
+                                <i class="bi bi-file-text me-2"></i>Description
+                            </h5>
+                            <p class="text-muted mb-0 book-description">
+                                @(Model.Description ?? "No description available.")
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reviews Section -->
+        <div class="reviews-section mt-5">
+            <h3 class="mb-4">
+                <i class="bi bi-star-fill me-2 text-warning"></i>Reviews
+            </h3>
+            
+            @if (User.Identity.IsAuthenticated)
+            {
+                <div class="card border-0 shadow-sm rounded-4 mb-4" id="reviewForm">
+                    <div class="card-body p-4">
+                        <h5 class="card-title mb-4">Write a Review</h5>
+                        <div class="mb-4">
+                            <label class="form-label">Rating</label>
+                            <div class="star-rating">
+                                <i class="bi bi-star" data-rating="1"></i>
+                                <i class="bi bi-star" data-rating="2"></i>
+                                <i class="bi bi-star" data-rating="3"></i>
+                                <i class="bi bi-star" data-rating="4"></i>
+                                <i class="bi bi-star" data-rating="5"></i>
+                            </div>
+                            <input type="hidden" id="selectedRating" value="0">
+                        </div>
+                        <div class="mb-3">
+                            <label for="reviewComment" class="form-label">Your Review</label>
+                            <textarea class="form-control" id="reviewComment" rows="3" 
+                                    placeholder="Share your thoughts about this book..."></textarea>
+                        </div>
+                        <button class="btn btn-primary px-4" onclick="submitReview()">
+                            <i class="bi bi-send me-2"></i>Submit Review
+                        </button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info rounded-4 d-flex align-items-center">
+                    <i class="bi bi-info-circle-fill me-2 fs-4"></i>
+                    <div>
+                        Please <a href="/Account/Login" class="alert-link">login</a> to write a review.
+                    </div>
+                </div>
+            }
+
+            <div id="reviewsList" class="mt-4">
+                <!-- Reviews will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        /* General Styles */
+        .book-details-wrapper {
+            background-color: #f8f9fa;
+        }
+
+        /* Book Image Styles */
+        .book-image-wrapper {
+            background: white;
+            transition: transform 0.3s ease;
+        }
+
+        .book-image-wrapper:hover {
+            transform: translateY(-5px);
+        }
+
+        .book-cover-image {
+            width: 100%;
+            height: auto;
+            max-height: 600px;
+            object-fit: contain;
+            padding: 2rem;
+        }
+
+        /* Sale Badge */
+        .sale-badge {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            z-index: 2;
+        }
+
+        .rotate-badge {
+            transform: rotate(-12deg);
+        }
+
+        /* Book Title Animation */
+        .book-title {
+            background: linear-gradient(120deg, #007bff 0%, #6610f2 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        /* Status Badges */
+        .status-badge {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        /* Action Buttons */
+        .action-buttons .btn {
+            transition: all 0.3s ease;
+        }
+
+        .action-buttons .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .bookmark-btn {
+            width: 60px;
+        }
+
+        /* Star Rating */
+        .star-rating {
+            color: #ffc107;
+            font-size: 1.75rem;
+            cursor: pointer;
+            display: inline-flex;
+            gap: 0.5rem;
+        }
+
+        .star-rating i {
+            transition: all 0.2s ease;
+        }
+
+        .star-rating i:hover,
+        .star-rating i.active {
+            color: #ffac07;
+            transform: scale(1.2);
+        }
+
+        /* Review Cards */
+        .review-card {
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            transition: background-color 0.2s ease;
+        }
+
+        .review-card:last-child {
+            border-bottom: none;
+        }
+
+        .review-card:hover {
+            background-color: rgba(0,0,0,0.02);
+        }
+
+        .review-actions {
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .review-card:hover .review-actions {
+            opacity: 1;
+        }
+
+        /* Toast Styling */
+        #bookmarkToast {
+            border-radius: 1rem;
+        }
+
+        /* Animations */
+        .book-details-content {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .fadeIn {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        @@keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive Adjustments */
+        @@media (max-width: 768px) {
+            .book-title {
+                font-size: 2rem;
+            }
+            
+            .price-section {
+                text-align: center;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .bookmark-btn {
+                width: 100%;
+            }
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        // Toast feedback function
+        function showToast(msg, type = 'success') {
+            let toast = document.getElementById('bookmarkToast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'bookmarkToast';
+                toast.style.position = 'fixed';
+                toast.style.bottom = '32px';
+                toast.style.right = '32px';
+                toast.style.zIndex = '9999';
+                toast.style.minWidth = '200px';
+                toast.style.transition = 'opacity 0.3s';
+                document.body.appendChild(toast);
+            }
+            toast.innerHTML = `<div class='alert alert-${type} shadow-sm mb-0 py-2 px-3 border-0'>${msg}</div>`;
+            toast.style.opacity = 1;
+            setTimeout(() => { toast.style.opacity = 0; }, 1800);
+        }
+
+        // Handle Add to Cart
+        document.querySelector('.add-cart-btn')?.addEventListener('click', async function() {
+            const bookId = this.dataset.bookid;
+            const btn = this;
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Adding...';
+            
+            try {
+                const res = await fetch('/api/cart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ BookID: bookId, Quantity: 1 })
+                });
+                
+                if (res.ok) {
+                    btn.innerHTML = '<i class="bi bi-cart-check"></i> Added!';
+                    showToast('Added to cart successfully!', 'success');
+                    setTimeout(() => {
+                        btn.innerHTML = '<i class="bi bi-cart-plus"></i> Add to Cart';
+                        btn.disabled = false;
+                    }, 1200);
+                } else {
+                    showToast('Failed to add to cart.', 'danger');
+                    btn.innerHTML = '<i class="bi bi-cart-plus"></i> Add to Cart';
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                showToast('Error adding to cart.', 'danger');
+                btn.innerHTML = '<i class="bi bi-cart-plus"></i> Add to Cart';
+                btn.disabled = false;
+            }
+        });
+
+        // Handle Bookmark Toggle
+        document.querySelector('.bookmark-btn')?.addEventListener('click', async function() {
+            if (!window.currentUserId) { 
+                showToast('Please log in to bookmark books.', 'danger'); 
+                return; 
+            }
+
+            const bookId = this.dataset.bookid;
+            const btn = this;
+            const icon = btn.querySelector('i');
+            const isCurrentlyBookmarked = icon.classList.contains('bi-bookmark-heart-fill');
+            
+            try {
+                const url = `/api/bookmark/${isCurrentlyBookmarked ? 'remove' : 'add'}/${bookId}`;
+                const res = await fetch(url, {
+                    method: isCurrentlyBookmarked ? 'DELETE' : 'POST',
+                    credentials: 'same-origin'
+                });
+                
+                if (res.ok) {
+                    icon.className = `bi ${isCurrentlyBookmarked ? "bi-bookmark-heart" : "bi-bookmark-heart-fill"}`;
+                    btn.title = isCurrentlyBookmarked ? 'Add to Bookmarks' : 'Remove from Bookmarks';
+                    showToast(isCurrentlyBookmarked ? 'Removed from bookmarks.' : 'Added to bookmarks!', 
+                             isCurrentlyBookmarked ? 'secondary' : 'success');
+                } else {
+                    showToast('Failed to update bookmark.', 'danger');
+                }
+            } catch (err) {
+                showToast('Error updating bookmark.', 'danger');
+            }
+        });
+
+        // Star rating functionality
+        const starRating = document.querySelector('.star-rating');
+        const stars = starRating.querySelectorAll('i');
+        const selectedRating = document.getElementById('selectedRating');
+
+        function setRating(rating) {
+            selectedRating.value = rating;
+            stars.forEach((star, index) => {
+                star.classList.remove('bi-star-fill', 'bi-star');
+                if (index < rating) {
+                    star.classList.add('bi-star-fill');
+                } else {
+                    star.classList.add('bi-star');
+                }
+            });
+        }
+
+        stars.forEach(star => {
+            star.addEventListener('click', () => {
+                const rating = parseInt(star.dataset.rating);
+                setRating(rating);
+            });
+
+            star.addEventListener('mouseover', () => {
+                const rating = parseInt(star.dataset.rating);
+                stars.forEach((s, index) => {
+                    s.classList.remove('bi-star-fill', 'bi-star');
+                    if (index < rating) {
+                        s.classList.add('bi-star-fill');
+                    } else {
+                        s.classList.add('bi-star');
+                    }
+                });
+            });
+        });
+
+        starRating.addEventListener('mouseleave', () => {
+            const rating = parseInt(selectedRating.value);
+            setRating(rating);
+        });
+
+        // Load reviews
+        async function loadReviews() {
+            try {
+                const response = await fetch(`/api/review/book/@Model.BookID`);
+                const reviews = await response.json();
+                const reviewsList = document.getElementById('reviewsList');
+                
+                if (!reviews.length) {
+                    reviewsList.innerHTML = `
+                        <div class="alert alert-light rounded-4 text-center py-4">
+                            <i class="bi bi-chat-square-text fs-1 text-muted mb-3 d-block"></i>
+                            <p class="mb-0">No reviews yet. Be the first to review!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                reviewsList.innerHTML = reviews.map(review => `
+                    <div class="review-card" id="review-${review.reviewID}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="mb-1">${review.user.fullName}</h5>
+                                <div class="text-warning mb-2">
+                                    ${Array(5).fill(0).map((_, i) => 
+                                        `<i class="bi bi-star${i < review.rating ? '-fill' : ''}"></i>`
+                                    ).join('')}
+                                </div>
+                            </div>
+                            ${review.canEdit ? `
+                                <div class="review-actions">
+                                    <button class="btn btn-sm btn-outline-primary me-2" onclick="editReview(${review.reviewID}, ${review.rating}, '${review.comment.replace(/'/g, "\\'")}')">
+                                        <i class="bi bi-pencil"></i> Edit
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteReview(${review.reviewID})">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <p class="mb-1">${review.comment}</p>
+                        <small class="text-muted">
+                            ${new Date(review.createdAt).toLocaleDateString()}
+                        </small>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading reviews:', error);
+                document.getElementById('reviewsList').innerHTML = `
+                    <div class="alert alert-danger rounded-4">
+                        <i class="bi bi-exclamation-circle me-2"></i>
+                        Failed to load reviews. Please try refreshing the page.
+                    </div>
+                `;
+            }
+        }
+
+        // Submit review
+        async function submitReview() {
+            const rating = parseInt(selectedRating.value);
+            const comment = document.getElementById('reviewComment').value.trim();
+
+            if (rating === 0) {
+                showToast('Please select a rating', 'warning');
+                return;
+            }
+
+            if (comment.length < 10) {
+                showToast('Review must be at least 10 characters long', 'warning');
+                return;
+            }
+
+            if (comment.length > 1000) {
+                showToast('Review must not exceed 1000 characters', 'warning');
+                return;
+            }
+
+            try {
+                console.log('Submitting review:', { bookID: @Model.BookID, rating, comment });
+                const response = await fetch('/api/review', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        bookID: @Model.BookID,
+                        rating: rating,
+                        comment: comment
+                    })
+                });
+
+                console.log('Submit response status:', response.status);
+                const contentType = response.headers.get('content-type');
+                console.log('Submit response content type:', contentType);
+
+                if (!response.ok) {
+                    if (contentType && contentType.includes('application/json')) {
+                        const errorData = await response.json();
+                        console.error('Submit error data:', errorData);
+                        let errorMessage = 'Failed to submit review';
+                        if (errorData.message) {
+                            errorMessage = errorData.message;
+                        } else if (errorData.errors) {
+                            const errors = [];
+                            for (const key in errorData.errors) {
+                                errors.push(...errorData.errors[key]);
+                            }
+                            errorMessage = errors.join(', ');
+                        }
+                        throw new Error(errorMessage);
+                    }
+                    throw new Error('Failed to submit review');
+                }
+
+                const result = await response.json();
+                console.log('Submit success, result:', result);
+
+                // Clear form
+                setRating(0);
+                document.getElementById('reviewComment').value = '';
+                
+                // Show success message
+                showToast('Review submitted successfully!', 'success');
+                
+                // Wait a short moment before reloading reviews
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Reload reviews
+                await loadReviews();
+            } catch (error) {
+                console.error('Error in submitReview:', error);
+                showToast(error.message || 'Failed to submit review. Please try again.', 'danger');
+            }
+        }
+
+        // Edit review
+        async function editReview(reviewId, currentRating, currentComment) {
+            // Create a modal for editing
+            const modalHtml = `
+                <div class="modal fade" id="editReviewModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Edit Review</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Rating</label>
+                                    <div class="star-rating-edit">
+                                        ${Array(5).fill(0).map((_, i) => `
+                                            <i class="bi bi-star${i < currentRating ? '-fill' : ''}" data-rating="${i + 1}"></i>
+                                        `).join('')}
+                                    </div>
+                                    <input type="hidden" id="editRating" value="${currentRating}">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="editComment" class="form-label">Your Review</label>
+                                    <textarea class="form-control" id="editComment" rows="3">${currentComment}</textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" onclick="saveReviewEdit(${reviewId})">Save Changes</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add modal to body if it doesn't exist
+            if (!document.getElementById('editReviewModal')) {
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+            }
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('editReviewModal'));
+            modal.show();
+
+            // Setup star rating in modal
+            const starRatingEdit = document.querySelector('.star-rating-edit');
+            const starsEdit = starRatingEdit.querySelectorAll('i');
+            const selectedRatingEdit = document.getElementById('editRating');
+
+            starsEdit.forEach(star => {
+                star.addEventListener('click', () => {
+                    const rating = parseInt(star.dataset.rating);
+                    selectedRatingEdit.value = rating;
+                    starsEdit.forEach((s, index) => {
+                        s.classList.remove('bi-star-fill', 'bi-star');
+                        if (index < rating) {
+                            s.classList.add('bi-star-fill');
+                        } else {
+                            s.classList.add('bi-star');
+                        }
+                    });
+                });
+
+                star.addEventListener('mouseover', () => {
+                    const rating = parseInt(star.dataset.rating);
+                    starsEdit.forEach((s, index) => {
+                        s.classList.remove('bi-star-fill', 'bi-star');
+                        if (index < rating) {
+                            s.classList.add('bi-star-fill');
+                        } else {
+                            s.classList.add('bi-star');
+                        }
+                    });
+                });
+            });
+
+            starRatingEdit.addEventListener('mouseleave', () => {
+                const rating = parseInt(selectedRatingEdit.value);
+                starsEdit.forEach((s, index) => {
+                    s.classList.remove('bi-star-fill', 'bi-star');
+                    if (index < rating) {
+                        s.classList.add('bi-star-fill');
+                    } else {
+                        s.classList.add('bi-star');
+                    }
+                });
+            });
+        }
+
+        async function saveReviewEdit(reviewId) {
+            const rating = parseInt(document.getElementById('editRating').value);
+            const comment = document.getElementById('editComment').value.trim();
+
+            if (rating === 0) {
+                showToast('Please select a rating', 'warning');
+                return;
+            }
+
+            if (comment.length < 10) {
+                showToast('Review must be at least 10 characters long', 'warning');
+                return;
+            }
+
+            if (comment.length > 1000) {
+                showToast('Review must not exceed 1000 characters', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/review/${reviewId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        reviewID: reviewId,
+                        rating: rating,
+                        comment: comment
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update review');
+                }
+
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editReviewModal'));
+                modal.hide();
+
+                // Show success message
+                showToast('Review updated successfully!', 'success');
+
+                // Reload reviews
+                await loadReviews();
+            } catch (error) {
+                console.error('Error updating review:', error);
+                showToast(error.message || 'Failed to update review. Please try again.', 'danger');
+            }
+        }
+
+        async function deleteReview(reviewId) {
+            if (!confirm('Are you sure you want to delete this review?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/review/${reviewId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to delete review');
+                }
+
+                // Show success message
+                showToast('Review deleted successfully!', 'success');
+
+                // Remove the review from the DOM
+                const reviewElement = document.getElementById(`review-${reviewId}`);
+                if (reviewElement) {
+                    reviewElement.remove();
+                }
+
+                // Reload reviews to update the display
+                await loadReviews();
+            } catch (error) {
+                console.error('Error deleting review:', error);
+                showToast(error.message || 'Failed to delete review. Please try again.', 'danger');
+            }
+        }
+
+        // Add currentUserId to window if user is authenticated
+        @if (User.Identity.IsAuthenticated)
+        {
+            @:window.currentUserId = "@User.FindFirst("sub")?.Value" || "@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value";
+        }
+        else
+        {
+            @:window.currentUserId = null;
+        }
+
+        // Add this function to check if user is authenticated
+        function isUserAuthenticated() {
+            return @(User.Identity.IsAuthenticated ? "true" : "false");
+        }
+
+        // Add this to the DOMContentLoaded event handler
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Page loaded, authenticated:', isUserAuthenticated());
+            loadReviews();
+        });
+    </script>
+}

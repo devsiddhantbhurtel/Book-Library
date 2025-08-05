@@ -1,0 +1,188 @@
+@{
+    ViewData["Title"] = "Manage Discounts";
+}
+<div class="container mt-4">
+    <h2 class="mb-4">Manage Discounts</h2>
+    <div id="discountsTableWrap">
+        <table class="table table-striped" id="discountsTable">
+            <thead>
+                <tr>
+                    <th>Book</th>
+                    <th>Type</th>
+                    <th>Value</th>
+                    <th>On Sale</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Stacking Rule</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="discountsBody">
+                <!-- Discounts will be loaded here -->
+            </tbody>
+        </table>
+    </div>
+    <!-- Add/Edit Discount Modal -->
+    <div class="modal fade" id="discountModal" tabindex="-1" aria-labelledby="discountModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="discountModalLabel">Add/Edit Discount</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="discountForm">
+                        <input type="hidden" id="discountId" />
+                        <div class="mb-2">
+                            <label>Book</label>
+                            <select class="form-control" id="discountBookSelect"></select>
+                        </div>
+                        <div class="mb-2">
+                            <label>Discount Type</label>
+                            <select class="form-control" id="discountType">
+                                <option value="0">Percentage</option>
+                                <option value="1">Amount</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label>Discount Value</label>
+                            <input type="number" class="form-control" id="discountValue" min="0" step="0.01" />
+                        </div>
+                        <div class="mb-2">
+                            <label>Is On Sale</label>
+                            <select class="form-control" id="discountIsOnSale">
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label>Start Date</label>
+                            <input type="date" class="form-control" id="discountStartDate" />
+                        </div>
+                        <div class="mb-2">
+                            <label>End Date</label>
+                            <input type="date" class="form-control" id="discountEndDate" />
+                        </div>
+                        <div class="mb-2">
+                            <label>Stacking Rule</label>
+                            <select class="form-control" id="discountStackingRule">
+                                <option value="Allow">Allow</option>
+                                <option value="Disallow">Disallow</option>
+                                <option value="Prioritize">Prioritize</option>
+                            </select>
+                        </div>
+                        <div id="discountMsg" class="mt-2"></div>
+                        <button type="submit" class="btn btn-primary">Save Discount</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <button class="btn btn-success mt-3" onclick="showDiscountModal()">Add Discount</button>
+</div>
+@section Scripts {
+<script>
+async function loadDiscounts() {
+    const discountsRes = await fetch('/api/discount');
+    const discounts = await discountsRes.json();
+    const booksRes = await fetch('/api/book');
+    const books = await booksRes.json();
+    const booksMap = {};
+    (Array.isArray(books) ? books : (books.$values || [])).forEach(b => booksMap[b.BookID] = b.Title);
+    const tbody = document.getElementById('discountsBody');
+    tbody.innerHTML = '';
+    (Array.isArray(discounts) ? discounts : (discounts.$values || [])).forEach(discount => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${booksMap[discount.BookID] || ''}</td>
+            <td>${discount.DiscountType === 0 ? 'Percentage' : 'Amount'}</td>
+            <td>${discount.DiscountType === 0 ? discount.DiscountValue + '%' : 'Rs. ' + discount.DiscountValue}</td>
+            <td>${discount.IsOnSale ? 'Yes' : 'No'}</td>
+            <td>${discount.StartDate ? discount.StartDate.substring(0,10) : ''}</td>
+            <td>${discount.EndDate ? discount.EndDate.substring(0,10) : ''}</td>
+            <td>${discount.StackingRule || ''}</td>
+            <td>
+                <button class="btn btn-sm btn-warning" onclick="editDiscount(${discount.DiscountID})">Edit</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteDiscount(${discount.DiscountID})">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+async function showDiscountModal(id) {
+    // Populate book dropdown
+    const booksRes = await fetch('/api/book');
+    const books = await booksRes.json();
+    const bookSelect = document.getElementById('discountBookSelect');
+    bookSelect.innerHTML = '<option value="">Select Book</option>' + (Array.isArray(books) ? books : (books.$values || [])).map(b => `<option value="${b.BookID}">${b.Title}</option>`).join('');
+    if (id) {
+        // Editing
+        const res = await fetch('/api/discount');
+        const discounts = await res.json();
+        const discount = (Array.isArray(discounts) ? discounts : (discounts.$values || [])).find(d => d.DiscountID === id);
+        document.getElementById('discountId').value = discount.DiscountID;
+        document.getElementById('discountBookSelect').value = discount.BookID;
+        document.getElementById('discountType').value = discount.DiscountType;
+        document.getElementById('discountValue').value = discount.DiscountValue;
+        document.getElementById('discountIsOnSale').value = discount.IsOnSale ? 'true' : 'false';
+        document.getElementById('discountStartDate').value = discount.StartDate ? discount.StartDate.substring(0,10) : '';
+        document.getElementById('discountEndDate').value = discount.EndDate ? discount.EndDate.substring(0,10) : '';
+        document.getElementById('discountStackingRule').value = discount.StackingRule || 'Allow';
+        document.getElementById('discountMsg').innerText = '';
+    } else {
+        // New
+        document.getElementById('discountId').value = '';
+        document.getElementById('discountBookSelect').value = '';
+        document.getElementById('discountType').value = '0';
+        document.getElementById('discountValue').value = '';
+        document.getElementById('discountIsOnSale').value = 'true';
+        document.getElementById('discountStartDate').value = '';
+        document.getElementById('discountEndDate').value = '';
+        document.getElementById('discountStackingRule').value = 'Allow';
+        document.getElementById('discountMsg').innerText = '';
+    }
+    var modal = new bootstrap.Modal(document.getElementById('discountModal'));
+    modal.show();
+}
+document.getElementById('discountForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const id = document.getElementById('discountId').value;
+    const discount = {
+        DiscountID: id ? parseInt(id) : 0,
+        BookID: parseInt(document.getElementById('discountBookSelect').value),
+        DiscountType: parseInt(document.getElementById('discountType').value),
+        DiscountValue: parseFloat(document.getElementById('discountValue').value),
+        IsOnSale: document.getElementById('discountIsOnSale').value === 'true',
+        StartDate: document.getElementById('discountStartDate').value,
+        EndDate: document.getElementById('discountEndDate').value,
+        StackingRule: document.getElementById('discountStackingRule').value
+    };
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `/api/discount/${id}` : '/api/discount';
+    const res = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(discount)
+    });
+    if (res.ok) {
+        document.getElementById('discountMsg').innerText = 'Saved!';
+        setTimeout(() => {
+            bootstrap.Modal.getInstance(document.getElementById('discountModal')).hide();
+            loadDiscounts();
+        }, 800);
+    } else {
+        document.getElementById('discountMsg').innerText = 'Save failed.';
+    }
+});
+async function editDiscount(id) {
+    await showDiscountModal(id);
+}
+async function deleteDiscount(id) {
+    if (!confirm('Are you sure you want to delete this discount?')) return;
+    const res = await fetch(`/api/discount/${id}`, { method: 'DELETE' });
+    if (res.ok) loadDiscounts();
+    else alert('Failed to delete discount');
+}
+window.onload = loadDiscounts;
+</script>
+}

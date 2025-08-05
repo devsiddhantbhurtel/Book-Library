@@ -1,0 +1,474 @@
+@{
+    ViewData["Title"] = "Manage Books";
+}
+<div class="container mt-4">
+    <h2 class="mb-4">Manage Books</h2>
+    <button class="btn btn-success mb-3" onclick="showAddForm()">Add New Book</button>
+    <div id="addBookForm" class="card mb-4" style="display:none;">
+        <div class="card-body">
+            <h5 class="card-title">Add Book</h5>
+            <form id="bookAddForm" enctype="multipart/form-data">
+    <div class="row">
+        <div class="col-md-6 mb-2">
+            <input type="text" class="form-control" name="Title" placeholder="Title" required />
+        </div>
+        <div class="col-md-6 mb-2">
+            <input type="text" class="form-control" name="ISBN" placeholder="ISBN" required />
+        </div>
+        <div class="col-md-12 mb-2">
+            <textarea class="form-control" name="Description" placeholder="Description"></textarea>
+        </div>
+        <div class="col-md-6 mb-2">
+            <input type="text" class="form-control" name="Language" placeholder="Language" />
+        </div>
+        <div class="col-md-6 mb-2">
+            <input type="text" class="form-control" name="Format" placeholder="Format (e.g., Hardcover, Signed Edition)" />
+        </div>
+        <div class="col-md-6 mb-2">
+            <input type="number" class="form-control" name="Price" placeholder="Price" required step="0.01" />
+        </div>
+        <div class="col-md-6 mb-2">
+            <input type="date" class="form-control" name="PublicationDate" placeholder="Publication Date" />
+        </div>
+        <div class="col-md-6 mb-2">
+            <input type="number" class="form-control" name="StockQuantity" placeholder="Stock Quantity" />
+        </div>
+        <div class="col-md-6 mb-2">
+            <input type="file" class="form-control" name="CoverImage" accept="image/*" />
+        </div>
+        <div class="col-md-6 mb-2">
+            <select class="form-control" name="InLibraryAccess">
+                <option value="false">Available for Checkout</option>
+                <option value="true">In-Library Access Only</option>
+            </select>
+        </div>
+        <div class="col-md-6 mb-2">
+            <label>Authors</label>
+            <select class="form-control" name="AuthorIds" id="authorSelect" multiple></select>
+            <input type="text" class="form-control mt-1" name="NewAuthors" id="newAuthorsInput" placeholder="Add new authors, comma separated">
+        </div>
+        <div class="col-md-6 mb-2">
+            <label>Genres</label>
+            <select class="form-control" name="GenreIds" id="genreSelect" multiple></select>
+            <input type="text" class="form-control mt-1" name="NewGenres" id="newGenresInput" placeholder="Add new genres, comma separated">
+        </div>
+        <div class="col-md-6 mb-2">
+            <label>Publisher</label>
+            <select class="form-control" name="PublisherId" id="publisherSelect">
+                <option value="">Select Publisher</option>
+            </select>
+            <input type="text" class="form-control mt-1" name="NewPublisher" id="newPublisherInput" placeholder="Add new publisher">
+        </div>
+        <div class="col-md-6 mb-2">
+            <label>Is Physical</label>
+            <select class="form-control" name="IsPhysical" id="isPhysicalSelect">
+                <option value="true">Physical</option>
+                <option value="false">Digital</option>
+            </select>
+        </div>
+        <div class="col-md-6 mb-2">
+            <label>Is Published</label>
+            <select class="form-control" name="IsPublished" id="isPublishedSelect">
+                <option value="true">Published</option>
+                <option value="false">Not Published</option>
+            </select>
+        </div>
+    </div>
+
+                <button type="submit" class="btn btn-primary">Add Book</button>
+                <button type="button" class="btn btn-secondary" onclick="hideAddForm()">Cancel</button>
+                <div id="addBookMsg" class="mt-2"></div>
+            </form>
+        </div>
+    </div>
+    <div id="booksTableWrap">
+        <table class="table table-striped" id="booksTable">
+            <thead>
+                <tr>
+                    <th>Cover</th>
+                    <th>Title</th>
+                    <th>ISBN</th>
+                    <th>Price</th>
+                    <th>Discount</th>
+                    <th>Stock</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="booksBody">
+                <!-- Books will be loaded here -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Edit Book Modal -->
+<div class="modal fade" id="editBookModal" tabindex="-1" aria-labelledby="editBookModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editBookModalLabel">Edit Book</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editBookForm" enctype="multipart/form-data">
+  <input type="hidden" name="BookID" id="editBookID" />
+  <div class="row">
+    <div class="col-md-6 mb-2">
+      <input type="text" class="form-control" name="Title" id="editTitle" placeholder="Title" required />
+    </div>
+    <div class="col-md-6 mb-2">
+      <input type="text" class="form-control" name="ISBN" id="editISBN" placeholder="ISBN" required />
+    </div>
+    <div class="col-md-12 mb-2">
+      <textarea class="form-control" name="Description" id="editDescription" placeholder="Description"></textarea>
+    </div>
+    <div class="col-md-6 mb-2">
+      <input type="text" class="form-control" name="Language" id="editLanguage" placeholder="Language" />
+    </div>
+    <div class="col-md-6 mb-2">
+      <input type="text" class="form-control" name="Format" id="editFormat" placeholder="Format (e.g., Hardcover, Signed Edition)" />
+    </div>
+    <div class="col-md-6 mb-2">
+      <input type="number" class="form-control" name="Price" id="editPrice" placeholder="Price" required step="0.01" />
+    </div>
+    <div class="col-md-6 mb-2">
+      <input type="date" class="form-control" name="PublicationDate" id="editPublicationDate" placeholder="Publication Date" />
+    </div>
+    <div class="col-md-6 mb-2">
+      <input type="number" class="form-control" name="StockQuantity" id="editStockQuantity" placeholder="Stock Quantity" />
+    </div>
+    <div class="col-md-6 mb-2">
+      <input type="file" class="form-control" name="CoverImage" id="editCoverImage" accept="image/*" />
+      <div id="currentCoverImg" class="mt-1"></div>
+    </div>
+    <div class="col-md-6 mb-2">
+      <label>In-Library Access</label>
+      <select class="form-control" name="InLibraryAccess" id="editInLibraryAccess">
+        <option value="false">Available for Checkout</option>
+        <option value="true">In-Library Access Only</option>
+      </select>
+    </div>
+    <div class="col-md-6 mb-2">
+      <label>Authors</label>
+      <select class="form-control" name="AuthorIds" id="editAuthorSelect" multiple></select>
+      <input type="text" class="form-control mt-1" name="NewAuthors" id="editNewAuthorsInput" placeholder="Add new authors, comma separated">
+    </div>
+    <div class="col-md-6 mb-2">
+      <label>Genres</label>
+      <select class="form-control" name="GenreIds" id="editGenreSelect" multiple></select>
+      <input type="text" class="form-control mt-1" name="NewGenres" id="editNewGenresInput" placeholder="Add new genres, comma separated">
+    </div>
+    <div class="col-md-6 mb-2">
+      <label>Publisher</label>
+      <select class="form-control" name="PublisherId" id="editPublisherSelect">
+        <option value="">Select Publisher</option>
+      </select>
+      <input type="text" class="form-control mt-1" name="NewPublisher" id="editNewPublisherInput" placeholder="Add new publisher">
+    </div>
+    <div class="col-md-6 mb-2">
+      <label>Is Physical</label>
+      <select class="form-control" name="IsPhysical" id="editIsPhysicalSelect">
+        <option value="true">Physical</option>
+        <option value="false">Digital</option>
+      </select>
+    </div>
+    <div class="col-md-6 mb-2">
+      <label>Is Published</label>
+      <select class="form-control" name="IsPublished" id="editIsPublishedSelect">
+        <option value="true">Published</option>
+        <option value="false">Not Published</option>
+      </select>
+    </div>
+  </div>
+  <hr/>
+  <h5>Discount Management</h5>
+  <div class="row">
+    <div class="col-md-6 mb-2">
+      <label>Discount Type</label>
+      <select class="form-control" id="editDiscountType">
+        <option value="0">Percentage</option>
+        <option value="1">Amount</option>
+      </select>
+    </div>
+    <div class="col-md-6 mb-2">
+      <label>Discount Value</label>
+      <input type="number" class="form-control" id="editDiscountValue" min="0" step="0.01" />
+    </div>
+    <div class="col-md-6 mb-2">
+      <label>Is On Sale</label>
+      <select class="form-control" id="editIsOnSale">
+        <option value="true">Yes</option>
+        <option value="false">No</option>
+      </select>
+    </div>
+    <div class="col-md-6 mb-2">
+      <label>Discount Start Date</label>
+      <input type="date" class="form-control" id="editDiscountStartDate" />
+    </div>
+    <div class="col-md-6 mb-2">
+      <label>Discount End Date</label>
+      <input type="date" class="form-control" id="editDiscountEndDate" />
+    </div>
+    <div class="col-md-6 mb-2">
+      <label>Stacking Rule</label>
+      <select class="form-control" id="editStackingRule">
+        <option value="Allow">Allow</option>
+        <option value="Disallow">Disallow</option>
+        <option value="Prioritize">Prioritize</option>
+      </select>
+    </div>
+  </div>
+  <div id="editBookMsg" class="mt-2"></div>
+  <button type="submit" class="btn btn-primary">Save Changes</button>
+</form>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script src="/js/book-options.js"></script>
+<script>
+async function showAddForm() {
+    document.getElementById('addBookForm').style.display = '';
+    let authors = [], genres = [], publishers = [];
+    let errorMsg = '';
+    try {
+        const [authorsRes, genresRes, publishersRes] = await Promise.all([
+            fetch('/api/author'), fetch('/api/genre'), fetch('/api/publisher')
+        ]);
+        if (!authorsRes.ok) throw new Error('Failed to load authors');
+        if (!genresRes.ok) throw new Error('Failed to load genres');
+        if (!publishersRes.ok) throw new Error('Failed to load publishers');
+        authors = await authorsRes.json();
+        genres = await genresRes.json();
+        publishers = await publishersRes.json();
+    } catch (err) {
+        errorMsg = err.message || 'Failed to load data from server.';
+    }
+    const authorSelect = document.getElementById('authorSelect');
+    const genreSelect = document.getElementById('genreSelect');
+    const publisherSelect = document.getElementById('publisherSelect');
+    if (errorMsg) {
+        authorSelect.innerHTML = '';
+        genreSelect.innerHTML = '';
+        publisherSelect.innerHTML = '<option value="">Select Publisher</option>';
+        document.getElementById('addBookMsg').innerHTML = `<span class="text-danger">${errorMsg}</span>`;
+        return;
+    }
+    authorSelect.innerHTML = Array.isArray(authors) ? authors.map(a => `<option value="${a.id}">${a.name}</option>`).join('') : '';
+    genreSelect.innerHTML = Array.isArray(genres) ? genres.map(g => `<option value="${g.id}">${g.name}</option>`).join('') : '';
+    publisherSelect.innerHTML = '<option value="">Select Publisher</option>' + (Array.isArray(publishers) ? publishers.map(p => `<option value="${p.id}">${p.name}</option>`).join('') : '');
+    document.getElementById('newAuthorsInput').value = '';
+    document.getElementById('newGenresInput').value = '';
+    document.getElementById('newPublisherInput').value = '';
+    document.getElementById('addBookMsg').innerHTML = '';
+}
+function hideAddForm() {
+    document.getElementById('addBookForm').style.display = 'none';
+}
+async function loadBooks() {
+    const res = await fetch('/api/book');
+    const data = await res.json();
+    const books = Array.isArray(data) ? data : (data.$values || []);
+    const tbody = document.getElementById('booksBody');
+    tbody.innerHTML = '';
+    books.forEach(book => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${book.ImageUrl ? `<img src="${book.ImageUrl}" alt="cover" style="height:60px;max-width:50px;object-fit:cover;"/>` : ''}</td>
+            <td>${book.Title}</td>
+            <td>${book.ISBN}</td>
+            <td>
+                ${book.Discounts && book.Discounts.length > 0 && book.Discounts[0].IsActive ? `<span class='text-danger fw-bold'>${book.Price - (book.Discounts[0].DiscountType === 0 ? book.Price * book.Discounts[0].DiscountValue / 100 : book.Discounts[0].DiscountValue)}</span> <span class='badge bg-success ms-2'>On Sale</span><br/><small class='text-decoration-line-through text-muted'>${book.Price}</small>` : book.Price}
+            </td>
+            <td>
+                ${book.Discounts && book.Discounts.length > 0 && book.Discounts[0].IsActive ? `${book.Discounts[0].DiscountType === 0 ? book.Discounts[0].DiscountValue + '% off' : 'Rs. ' + book.Discounts[0].DiscountValue + ' off'}` : ''}
+            </td>
+            <td>${book.StockQuantity}</td>
+            <td>
+                <button class="btn btn-sm btn-warning" onclick="editBook(${book.BookID})">Edit</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteBook(${book.BookID})">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+document.getElementById('bookAddForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+    // Add selected authors and genres as array (as repeated fields)
+    const authorIds = Array.from(document.getElementById('authorSelect').selectedOptions).map(opt => opt.value).filter(Boolean);
+    const genreIds = Array.from(document.getElementById('genreSelect').selectedOptions).map(opt => opt.value).filter(Boolean);
+    formData.delete('AuthorIds');
+    formData.delete('GenreIds');
+    authorIds.forEach(id => formData.append('AuthorIds', id));
+    genreIds.forEach(id => formData.append('GenreIds', id));
+    // Add new authors/genres as repeated fields
+    const newAuthors = document.getElementById('newAuthorsInput').value.split(',').map(a => a.trim()).filter(a => a);
+    const newGenres = document.getElementById('newGenresInput').value.split(',').map(g => g.trim()).filter(g => g);
+    formData.delete('Authors');
+    formData.delete('Genres');
+    newAuthors.forEach(a => formData.append('Authors', a));
+    newGenres.forEach(g => formData.append('Genres', g));
+    // Publisher: send either PublisherId or Publisher, not both
+    const publisherId = document.getElementById('publisherSelect').value;
+    const newPublisher = document.getElementById('newPublisherInput').value.trim();
+    formData.delete('PublisherId');
+    formData.delete('Publisher');
+    if (newPublisher) {
+        formData.append('Publisher', newPublisher);
+    } else if (publisherId) {
+        formData.append('PublisherId', publisherId);
+    }
+    const token = localStorage.getItem('token');
+    const res = await fetch('/api/book/admin/create', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    });
+    if (res.ok) {
+        document.getElementById('addBookMsg').innerHTML = '<span class="text-success">Book added!</span>';
+        form.reset();
+        hideAddForm();
+        loadBooks();
+    } else {
+        let errorMsg = 'Failed to add book';
+        try {
+            const err = await res.clone().json();
+            errorMsg += ': ' + (err.message || JSON.stringify(err));
+        } catch {
+            try {
+                const errText = await res.text();
+                if (errText) errorMsg += ': ' + errText;
+            } catch {}
+        }
+        document.getElementById('addBookMsg').innerHTML = '<span class="text-danger">' + errorMsg + '</span>';
+    }
+});
+async function deleteBook(id) {
+    if (!confirm('Are you sure you want to delete this book?')) return;
+    const res = await fetch(`/api/book/${id}`, { method: 'DELETE' });
+    if (res.ok) loadBooks();
+    else alert('Failed to delete book');
+}
+let currentEditBook = null;
+async function editBook(bookID) {
+    // Fetch book and discount info
+    const res = await fetch('/api/book/' + bookID);
+    const book = await res.json();
+    currentEditBook = book;
+    document.getElementById('editBookID').value = book.BookID;
+    document.getElementById('editTitle').value = book.Title || '';
+    document.getElementById('editISBN').value = book.ISBN || '';
+    document.getElementById('editPrice').value = book.Price || '';
+    document.getElementById('editStockQuantity').value = book.StockQuantity || '';
+    document.getElementById('editDescription').value = book.Description || '';
+    document.getElementById('editLanguage').value = book.Language || '';
+    document.getElementById('editFormat').value = book.Format || '';
+    document.getElementById('editPublicationDate').value = book.PublicationDate ? book.PublicationDate.substring(0,10) : '';
+    document.getElementById('editInLibraryAccess').value = book.InLibraryAccess ? 'true' : 'false';
+    document.getElementById('editIsPhysicalSelect').value = book.IsPhysical ? 'true' : 'false';
+    document.getElementById('editIsPublishedSelect').value = book.IsPublished ? 'true' : 'false';
+    // Populate discount fields (first discount only for now)
+    let discount = (book.Discounts && book.Discounts.length > 0) ? book.Discounts[0] : null;
+    document.getElementById('editDiscountType').value = discount ? discount.DiscountType : '0';
+    document.getElementById('editDiscountValue').value = discount ? discount.DiscountValue : '';
+    document.getElementById('editIsOnSale').value = discount && discount.IsOnSale ? 'true' : 'false';
+    document.getElementById('editDiscountStartDate').value = discount && discount.StartDate ? discount.StartDate.substring(0,10) : '';
+    document.getElementById('editDiscountEndDate').value = discount && discount.EndDate ? discount.EndDate.substring(0,10) : '';
+    document.getElementById('editStackingRule').value = discount && discount.StackingRule ? discount.StackingRule : 'Allow';
+    document.getElementById('editBookMsg').innerText = '';
+    // Show the modal (Bootstrap 5)
+    var modal = new bootstrap.Modal(document.getElementById('editBookModal'));
+    modal.show();
+}
+
+document.getElementById('editBookForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const bookID = document.getElementById('editBookID').value;
+    const publicationDate = document.getElementById('editPublicationDate').value;
+    
+    // Create an object to store only the changed fields
+    const updatedFields = {};
+    
+    // Helper function to check if a field has changed
+    function hasFieldChanged(fieldId, originalValue, transform = val => val) {
+        const element = document.getElementById(fieldId);
+        const newValue = transform(element.value);
+        return originalValue !== newValue ? newValue : undefined;
+    }
+
+    // Check each field and only include it if it's changed
+    if (currentEditBook) {
+        const title = hasFieldChanged('editTitle', currentEditBook.Title);
+        if (title !== undefined) updatedFields.Title = title;
+
+        const isbn = hasFieldChanged('editISBN', currentEditBook.ISBN);
+        if (isbn !== undefined) updatedFields.ISBN = isbn;
+
+        const description = hasFieldChanged('editDescription', currentEditBook.Description);
+        if (description !== undefined) updatedFields.Description = description;
+
+        const language = hasFieldChanged('editLanguage', currentEditBook.Language);
+        if (language !== undefined) updatedFields.Language = language;
+
+        const format = hasFieldChanged('editFormat', currentEditBook.Format);
+        if (format !== undefined) updatedFields.Format = format;
+
+        const price = hasFieldChanged('editPrice', currentEditBook.Price, val => parseFloat(val));
+        if (price !== undefined) updatedFields.Price = price;
+
+        if (publicationDate) {
+            const newDate = new Date(publicationDate).toISOString();
+            const oldDate = currentEditBook.PublicationDate ? new Date(currentEditBook.PublicationDate).toISOString() : null;
+            if (newDate !== oldDate) updatedFields.PublicationDate = newDate;
+        }
+
+        const stockQuantity = hasFieldChanged('editStockQuantity', currentEditBook.StockQuantity, val => parseInt(val));
+        if (stockQuantity !== undefined) updatedFields.StockQuantity = stockQuantity;
+
+        const isPhysical = hasFieldChanged('editIsPhysicalSelect', currentEditBook.IsPhysical, val => val === 'true');
+        if (isPhysical !== undefined) updatedFields.IsPhysical = isPhysical;
+
+        const isPublished = hasFieldChanged('editIsPublishedSelect', currentEditBook.IsPublished, val => val === 'true');
+        if (isPublished !== undefined) updatedFields.IsPublished = isPublished;
+
+        const inLibraryAccess = hasFieldChanged('editInLibraryAccess', currentEditBook.InLibraryAccess, val => val === 'true');
+        if (inLibraryAccess !== undefined) updatedFields.InLibraryAccess = inLibraryAccess;
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/book/' + bookID, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify(updatedFields)
+        });
+
+        if (res.ok) {
+            document.getElementById('editBookMsg').innerHTML = '<span class="text-success">Book updated successfully!</span>';
+            // Hide modal after short delay and reload books
+            setTimeout(() => {
+                bootstrap.Modal.getInstance(document.getElementById('editBookModal')).hide();
+                loadBooks();
+            }, 800);
+        } else {
+            const errorData = await res.json();
+            document.getElementById('editBookMsg').innerHTML = '<span class="text-danger">Update failed: ' + (errorData.message || 'Unknown error') + '</span>';
+            console.error('Update failed:', errorData);
+        }
+    } catch (error) {
+        document.getElementById('editBookMsg').innerHTML = '<span class="text-danger">Error: ' + error.message + '</span>';
+        console.error('Error updating book:', error);
+    }
+});
+window.onload = loadBooks;
+</script>
+}
